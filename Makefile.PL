@@ -5,7 +5,7 @@ WriteMakefile(
     VERSION_FROM      => 'lib/HTTP/Daemon/App.pm', 
     PREREQ_PM         => {
         'version'           => 0,
-        'Unix::PID'         => 0.0.8,
+        'Unix::PID'         => 0.0.9,
         'HTTP::Daemon'      => 0,
         'HTTP::Daemon::SSL' => 0,
         'HTTP::Status'      => 0,
