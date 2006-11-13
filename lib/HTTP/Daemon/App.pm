@@ -3,7 +3,7 @@ package HTTP::Daemon::App;
 use strict;
 use warnings;
 
-use version;our $VERSION = qv(0.0.2);
+use version;our $VERSION = qv('0.0.3');
 
 use HTTP::Daemon;
 use HTTP::Daemon::SSL;
@@ -30,13 +30,13 @@ sub run {
     
     my $additional = '';
     for my $opt (sort keys %{ $conf->{'opts'} }) {
-        if($opt eq '--start' || $opt eq '--stop' || $opt eq 'restart') {
+        if($opt eq '--start' || $opt eq '--stop' || $opt eq '--restart') {
             delete $conf->{'opts'}{$opt};
             next;
         }
         $additional .= "|$opt";
     }
-    
+
     $ARGV[0] = '--help' if !defined $ARGV[0]; # no uninit warnings and logical visual clue to coders of what will happen if its not specified...
     if($ARGV[0] eq '--restart') {
         system qq($conf->{'self'} --stop);
@@ -47,7 +47,7 @@ sub run {
         
     if($ARGV[0] eq '--start') {
     	for my $daemon (sort keys %{ $daemons_hashref }) {
-    		next if ref $daemons_hashref->{$daemon}{'handler'} ne 'CODE';
+            next if ref $daemons_hashref->{$daemon}{'handler'} ne 'CODE';
     	    next if ref $daemons_hashref->{$daemon}{'daemon'} ne 'HASH';
     	    
             my $pidfile = File::Spec->catfile($conf->{'pid_dir'}, "$daemon$conf->{'pid_ext'}");
@@ -56,7 +56,11 @@ sub run {
     	                ? HTTP::Daemon::SSL->new( %{ $daemons_hashref->{$daemon}{'daemon'} } )
     	                : HTTP::Daemon->new( %{ $daemons_hashref->{$daemon}{'daemon'} } )
     	                ;
-    	    next if !$objkt;
+            if(!$objkt) {
+                print "$daemon: $!\n";
+    	        next;
+            }
+
     	    print "Starting $daemons_hashref->{$daemon}{'label'}: <URL:" . $objkt->url . ">\n"
     	        if defined $daemons_hashref->{$daemon}{'label'};
 
@@ -86,9 +90,12 @@ sub run {
     	    if($pid == 1) {
     	        print "$daemon is not running\n";
     	    }
-    	    else {
+    	    elsif($pid eq '-1') {
+                print "$daemon pidfile error: $!";
+            }
+            else {
     	        print "$daemon ($pid) was stopped\n";
-    	    }
+    	    }   
     	}
     }
     elsif(exists $conf->{'opts'}{$ARGV[0]}) {

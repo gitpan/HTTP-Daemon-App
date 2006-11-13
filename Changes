@@ -5,3 +5,6 @@ Revision history for Perl extension HTTP::Daemon::App.
 		-AXc -n HTTP::Daemon::App
 0.0.2
 	- added missing ! when setting pid_ext, made --stop give similar output as --start, uninit warning with no args quieted and 
+
+0.0.3  Mon Nov 13 17:22:25 2006
+    - better output when already running @ --start or not running @ --stop, fixed option check (restart to --restart)
