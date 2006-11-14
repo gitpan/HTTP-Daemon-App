@@ -8,3 +8,6 @@ Revision history for Perl extension HTTP::Daemon::App.
 
 0.0.3  Mon Nov 13 17:22:25 2006
     - better output when already running @ --start or not running @ --stop, fixed option check (restart to --restart)
+    
+0.0.4  Tue Nov 14 10:37:28 2006
+    - added send_basic_auth_request() and header grabbing to decode_basic_auth(), passed $conf to handler

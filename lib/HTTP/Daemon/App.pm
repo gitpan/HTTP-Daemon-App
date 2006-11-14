@@ -3,27 +3,39 @@ package HTTP::Daemon::App;
 use strict;
 use warnings;
 
-use version;our $VERSION = qv('0.0.3');
+use version;our $VERSION = qv('0.0.4');
 
 use HTTP::Daemon;
 use HTTP::Daemon::SSL;
-use HTTP::Status;
+# use HTTP::Status;
 use HTTP::Response;
 use Acme::Spork;
 use Unix::PID;
 use File::Spec;
 
 use base 'Exporter';
-our @EXPORT_OK = qw(run decode_basic_auth);
+our @EXPORT_OK = qw(run decode_basic_auth send_basic_auth_request);
+
+sub send_basic_auth_request {
+	my ($c, $realm)      = @_;
+	$realm               = 'Restricted Area' if !$realm;
+	my $auth_request_res = HTTP::Response->new(401, 'Unauthorized');
+	$auth_request_res->header('WWW-Authenticate' => qq{Basic realm="$realm"});
+	$c->send_response($auth_request_res);
+}
 
 sub decode_basic_auth {
+	my ($auth) = @_;
+	no warnings 'uninitialized';
+    $auth = ( split /\s+/, $auth->header('Authorization') )[1] if ref $auth;
     require MIME::Base64;
-    return split(/:/, MIME::Base64::decode( shift ), 2);
+    return split(/:/, MIME::Base64::decode( $auth ), 2);
 }
 
 sub run {
     my($daemons_hashref, $conf) = @_;  
     
+    $conf              = {} if ref $conf ne 'CODE';
     $conf->{'pid_dir'} = File::Spec->catdir(qw(/ var run)) if !$conf->{'pid_dir'};
     $conf->{'pid_ext'} = '.pid' if !$conf->{'pid_ext'};
     $conf->{'self'}    = "perl $0" if !$conf->{'self'};
@@ -66,17 +78,17 @@ sub run {
 
     		my $http_pid = spork(
     		    sub {
-    		        my($spork, $d, $name, $pidfile) = @_;
+    		        my($handler, $d, $name, $pidfile, $conf) = @_;
                     local $0 = $name;
                 	while (my $c = $d->accept) {
                 	    while (my $r = $c->get_request) {
-                	        $spork->($d, $c, $r);
+                	        $handler->($d, $c, $r, $conf);
                 	    }
                 	    $c->close;
                 	    undef($c);
                 	}
                 	unlink $pidfile;
-		        }, $daemons_hashref->{$daemon}{'handler'}, $objkt, $daemon, $pidfile
+		        }, $daemons_hashref->{$daemon}{'handler'}, $objkt, $daemon, $pidfile, $conf,
     		);
 
     		Unix::PID->new()->pid_file_no_unlink($pidfile, $http_pid)
@@ -151,7 +163,7 @@ Hopefully these are self descriptive, this example does two daemons SSL and non-
                 'LocalPort' => 4279,
             },
             'handler' => sub {
-                my($d, $c, $r) = @_; # $d, $c, $r from HTTP::Daemon
+                my($d, $c, $r, $conf_hr) = @_; # $d, $c, $r from HTTP::Daemon
                 # handle request
             },
         },
@@ -163,7 +175,7 @@ Hopefully these are self descriptive, this example does two daemons SSL and non-
                 'LocalPort' => 4278,
             },
             'handler' => sub {
-                my($d, $c, $r) = @_; # $d, $c, $r from HTTP::Daemon
+                my($d, $c, $r, $conf_hr) = @_; # $d, $c, $r from HTTP::Daemon
                 # handle request
             },
         },
@@ -187,13 +199,27 @@ Hopefully these are self descriptive, this example does two daemons SSL and non-
 
 =head2 decode_basic_auth
 
-Given the encoded basic auth passed by the browser this will return the username an password.
+Given the encoded basic auth passed by the browser 
+(or given the "$r" object from HTTP::Daemon, the 'Authorization' header's value) 
+this will return the username an password.
 
     my ($auth_user, $auth_pass) = decode_basic_auth( $encoded_basic_auth_from_browser );
     my($user, $encpass, $uid, $gid, $homedir) = (getpwnam($auth_user))[0, 1, 2, 3, 7];
     
     if($auth_user && $encpass eq crypt($auth_pass, $encpass) && $user eq $auth_user) {
         ... # continue on as authenticated user
+
+=head2 send_basic_auth_request
+
+Takes two arguments: the "$c" object from HTTP::Request, the realm's name (has lame default if not specified)
+
+It does a 401 that incites the client's authentication challenge (E.g. a browser's drop down login box)
+
+        ... # continue on as authenticated user
+	}
+	else {
+	    HTTP::Daemon::App::send_basic_auth_request($c, 'Vault of secrets');
+	}
 
 =head1 SEE ALSO
 
