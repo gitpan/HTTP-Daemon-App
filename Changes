@@ -11,3 +11,6 @@ Revision history for Perl extension HTTP::Daemon::App.
     
 0.0.4  Tue Nov 14 10:37:28 2006
     - added send_basic_auth_request() and header grabbing to decode_basic_auth(), passed $conf to handler
+    
+0.0.5 Tue Nov 14 14:30:16 2006
+    - added additional fork in run() to properly do children and place nice when child is "suexec"edified

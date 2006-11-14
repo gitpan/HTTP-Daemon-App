@@ -3,7 +3,7 @@ package HTTP::Daemon::App;
 use strict;
 use warnings;
 
-use version;our $VERSION = qv('0.0.4');
+use version;our $VERSION = qv('0.0.5');
 
 use HTTP::Daemon;
 use HTTP::Daemon::SSL;
@@ -81,13 +81,20 @@ sub run {
     		        my($handler, $d, $name, $pidfile, $conf) = @_;
                     local $0 = $name;
                 	while (my $c = $d->accept) {
-                	    while (my $r = $c->get_request) {
-                	        $handler->($d, $c, $r, $conf);
+	                    if(my $kid = fork()) {
+		            	    $c->close;
+	                	    undef($c);
+	                    }
+	                    else {
+		               	    while (my $r = $c->get_request) {
+                	            $handler->($d, $c, $r, $conf);
+                            }
+	                	    $c->close;
+	                	    undef($c);
+	                        exit 0;
                 	    }
-                	    $c->close;
-                	    undef($c);
                 	}
-                	unlink $pidfile;
+                	# unlink $pidfile;
 		        }, $daemons_hashref->{$daemon}{'handler'}, $objkt, $daemon, $pidfile, $conf,
     		);
 
@@ -103,7 +110,7 @@ sub run {
     	        print "$daemon is not running\n";
     	    }
     	    elsif($pid eq '-1') {
-                print "$daemon pidfile error: $!";
+                print "$daemon pidfile: $!\n";
             }
             else {
     	        print "$daemon ($pid) was stopped\n";
