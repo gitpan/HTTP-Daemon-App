@@ -3,7 +3,7 @@ package HTTP::Daemon::App;
 use strict;
 use warnings;
 
-use version;our $VERSION = qv('0.0.5');
+use version;our $VERSION = qv('0.0.6');
 
 use HTTP::Daemon;
 use HTTP::Daemon::SSL;
@@ -51,7 +51,7 @@ sub run {
 
     $ARGV[0] = '--help' if !defined $ARGV[0]; # no uninit warnings and logical visual clue to coders of what will happen if its not specified...
     if($ARGV[0] eq '--restart') {
-        system qq($conf->{'self'} --stop);
+        system qq($conf->{'self'} --stop $$);
         sleep 1;
         system qq($conf->{'self'} --start);
         exit;	
@@ -105,7 +105,10 @@ sub run {
     elsif($ARGV[0] eq '--stop') {
     	for my $daemon (sort keys %{ $daemons_hashref }) {
     	    my $pidfile = File::Spec->catfile($conf->{'pid_dir'}, "$daemon$conf->{'pid_ext'}");
-    	    my $pid = Unix::PID->new()->kill_pid_file($pidfile);
+
+            my $uxp = Unix::PID->new();
+    	    my $pid = $uxp->kill_pid_file($pidfile);
+
     	    if($pid == 1) {
     	        print "$daemon is not running\n";
     	    }
@@ -115,6 +118,12 @@ sub run {
             else {
     	        print "$daemon ($pid) was stopped\n";
     	    }   
+
+            print "\tCollecting $daemon children...\n";
+            for my $kid ($uxp->get_pidof($daemon) ) {
+	            next if defined $ARGV[1] && $kid eq $ARGV[1];
+	            $uxp->kill( $kid ) or print "\t\tCould not kill $daemon child $kid: $!\n";
+            }
     	}
     }
     elsif(exists $conf->{'opts'}{$ARGV[0]}) {
