@@ -3,7 +3,7 @@ package HTTP::Daemon::App;
 use strict;
 use warnings;
 
-use version;our $VERSION = qv('0.0.6');
+use version;our $VERSION = qv('0.0.7');
 
 use HTTP::Daemon;
 use HTTP::Daemon::SSL;
@@ -82,14 +82,14 @@ sub run {
                     local $0 = $name;
                 	while (my $c = $d->accept) {
 	                    if(my $kid = fork()) {
-		            	    $c->close;
+		                    $c->can('get_cipher') ? $c->close('SSL_no_shutdown' => 1) : $c->close;
 	                	    undef($c);
 	                    }
 	                    else {
 		               	    while (my $r = $c->get_request) {
                 	            $handler->($d, $c, $r, $conf);
                             }
-	                	    $c->close;
+                            $c->can('get_cipher') ? $c->close('SSL_no_shutdown' => 1) : $c->close;	
 	                	    undef($c);
 	                        exit 0;
                 	    }

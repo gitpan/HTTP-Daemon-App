@@ -17,3 +17,6 @@ Revision history for Perl extension HTTP::Daemon::App.
     
 0.0.6  Tue Nov 14 16:01:48 2006
     - --stop/--restart cleanup kids from 0.0.5 change 
+    
+0.0.7  Wed Nov 15 06:35:21 2006
+    - make close() 'SSL_no_shutdown' => 1 if Daemon is SSL
