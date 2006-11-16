@@ -3,7 +3,7 @@ package HTTP::Daemon::App;
 use strict;
 use warnings;
 
-use version;our $VERSION = qv('0.0.7');
+use version;our $VERSION = qv('0.0.8');
 
 use HTTP::Daemon;
 use HTTP::Daemon::SSL;
@@ -21,6 +21,8 @@ sub send_basic_auth_request {
 	$realm               = 'Restricted Area' if !$realm;
 	my $auth_request_res = HTTP::Response->new(401, 'Unauthorized');
 	$auth_request_res->header('WWW-Authenticate' => qq{Basic realm="$realm"});
+	$auth_request_res->is_error(1);
+    $auth_request_res->error_as_HTML(1);
 	$c->send_response($auth_request_res);
 }
 
@@ -81,6 +83,8 @@ sub run {
     		        my($handler, $d, $name, $pidfile, $conf) = @_;
                     local $0 = $name;
                 	while (my $c = $d->accept) {
+                	    $conf->{'pre_fork'}->(@_) if ref $conf->{'pre_fork'} eq 'CODE';
+                	    
 	                    if(my $kid = fork()) {
 		                    $c->can('get_cipher') ? $c->close('SSL_no_shutdown' => 1) : $c->close;
 	                	    undef($c);
@@ -93,6 +97,8 @@ sub run {
 	                	    undef($c);
 	                        exit 0;
                 	    }
+                	    
+                	    $conf->{'pst_fork'}->(@_) if ref $conf->{'pst_fork'} eq 'CODE';
                 	}
                 	# unlink $pidfile;
 		        }, $daemons_hashref->{$daemon}{'handler'}, $objkt, $daemon, $pidfile, $conf,

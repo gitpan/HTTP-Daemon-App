@@ -20,3 +20,6 @@ Revision history for Perl extension HTTP::Daemon::App.
     
 0.0.7  Wed Nov 15 06:35:21 2006
     - make close() 'SSL_no_shutdown' => 1 if Daemon is SSL
+
+0.0.8  Wed Nov 15 17:59:45 2006
+	- added pst_fork, pre_fork hooks. made send_basic_auth_request() do is_error() and error_as_HTML()
