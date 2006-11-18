@@ -23,3 +23,6 @@ Revision history for Perl extension HTTP::Daemon::App.
 
 0.0.8  Wed Nov 15 17:59:45 2006
 	- added pst_fork, pre_fork hooks. made send_basic_auth_request() do is_error() and error_as_HTML()
+
+0.0.9  Fri Nov 17 16:38:29 2006 
+	- no $c cleanup in child. large file support errata in readme

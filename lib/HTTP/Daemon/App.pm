@@ -3,11 +3,10 @@ package HTTP::Daemon::App;
 use strict;
 use warnings;
 
-use version;our $VERSION = qv('0.0.8');
+use version;our $VERSION = qv('0.0.9');
 
 use HTTP::Daemon;
 use HTTP::Daemon::SSL;
-# use HTTP::Status;
 use HTTP::Response;
 use Acme::Spork;
 use Unix::PID;
@@ -90,17 +89,17 @@ sub run {
 	                	    undef($c);
 	                    }
 	                    else {
-		               	    while (my $r = $c->get_request) {
+	                        $conf->{'get_tmpfile'} = sub { return } if ref $conf->{'get_tmpfile'} ne 'CODE';
+		               	    while (my $r = $c->get_request( $conf->{'get_tmpfile'}->( $conf ) )) {
                 	            $handler->($d, $c, $r, $conf);
                             }
-                            $c->can('get_cipher') ? $c->close('SSL_no_shutdown' => 1) : $c->close;	
-	                	    undef($c);
+                            # $c->can('get_cipher') ? $c->close('SSL_no_shutdown' => 1) : $c->close;	
+	                        # undef($c);
 	                        exit 0;
                 	    }
                 	    
                 	    $conf->{'pst_fork'}->(@_) if ref $conf->{'pst_fork'} eq 'CODE';
                 	}
-                	# unlink $pidfile;
 		        }, $daemons_hashref->{$daemon}{'handler'}, $objkt, $daemon, $pidfile, $conf,
     		);
 
@@ -206,6 +205,8 @@ Hopefully these are self descriptive, this example does two daemons SSL and non-
 =head3 config hashref
 
     {
+        'pre_fork' => '', # set to a code ref it gets called before it forks the child process,  its args are ($handler, $d, $name, $pidfile, $conf)
+        'pst_fork' => '', # same as pre_fork but run after the fork is done
         'pid_dir' => '/var/run/', # default shown
         'pid_ext' => '.pid', # default shown
         'verbose' => 0, # example of your custom option that can be used by your handlers and set via 'opts' like below
